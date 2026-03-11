@@ -1,110 +1,374 @@
-# AL Carbon Calculator
+# 🌱 Calculadora de Carbono - Backend
 
-## Description
+Sistema backend para cálculo de pegada de carbono desenvolvido com **Java**, **Spring Boot** e **MongoDB**.
 
-Create the backend for a carbon calculator, using Java, Spring Boot and MongoDB.
+## 📋 Sobre o Projeto
 
-There are only 3 endpoints that need to be implemented:
+Esta aplicação permite que usuários calculem sua pegada de carbono mensal baseada em:
+- **Consumo de energia elétrica** (por estado brasileiro)
+- **Tipo de transporte** e distância percorrida
+- **Produção de resíduos sólidos** (considerando taxa de reciclagem)
 
-### [POST] /open/start-calc
+---
 
-Starts the calculation process. Receives the user basic info and stores a new calculation in the database. Returns the
-calculation's id
-to be used in the following endpoints. For this endpoint, every parameter is mandatory (name, email, phoneNumber and
-UF).
+## 🚀 Tecnologias Utilizadas
 
-### [PUT] /open/info
+- **Java 11+**
+- **Spring Boot 2.7+**
+- **MongoDB** (via Docker)
+- **Lombok** (redução de boilerplate)
+- **Swagger/OpenAPI** (documentação de API)
+- **JUnit 5 + Mockito** (testes unitários)
+- **SLF4J** (logging)
+- **Gradle** (build tool)
 
-Receives information needed to calculate the user's carbon emission (energy consumption, transportation and solid waste
-production) and stores it in the database.
+---
 
-Please consider `recyclePercentage` as a double from 0 to 1.0, representing the percentage of recyclable solid waste.
+## 📦 Estrutura do Projeto
 
-If this endpoint is called a second time for the same id, all its parameters must be overwritten.
+```
+src/main/java/br/com/actionlabs/carboncalc/
+├── config/              # Configurações (Swagger, Security, etc)
+├── dto/                 # Data Transfer Objects
+├── enums/               # Enumerações
+├── exception/           # Exceções customizadas e handlers
+│   ├── CalculationNotFoundException.java
+│   └── GlobalExceptionHandler.java
+├── model/               # Entidades/Modelos
+│   ├── Calculation.java                    ⭐ NOVO
+│   ├── EnergyEmissionFactor.java
+│   ├── TransportationEmissionFactor.java
+│   └── SolidWasteEmissionFactor.java
+├── repository/          # Camada de acesso a dados
+│   ├── CalculationRepository.java          ⭐ NOVO
+│   ├── EnergyEmissionFactorRepository.java
+│   ├── TransportationEmissionFactorRepository.java
+│   └── SolidWasteEmissionFactorRepository.java
+├── rest/                # Controllers REST
+│   └── OpenRestController.java             ⭐ IMPLEMENTADO
+├── service/             # Lógica de negócio
+│   └── CarbonCalculatorService.java        ⭐ NOVO
+└── CarbonCalculatorApplication.java
 
-### [GET] /open/result/{id}
+src/test/java/br/com/actionlabs/carboncalc/
+└── service/
+    └── CarbonCalculatorServiceTest.java    ⭐ NOVO
+```
 
-Returns the carbon footprint for the calculation with the given id.
+---
 
-All these endpoints are already defined in the class `OpenRestController`. You should implement the methods in this
-class.
+## 🔧 Como Executar
 
-## Calculator logic
+### 1. Pré-requisitos
 
-There are emission factors already saved in the database for energy consumption (`EnergyEmissionFactor.class`),
-transportation (`TransportationEmissionFactor.class`) and solid waste (`SolidWasteEmissionFactor.class`). These factors
-must be used to calculate the full carbon emission for this user, according to the following formulas:
+- Java 11 ou superior
+- Docker e Docker Compose
+- Gradle (ou use o wrapper incluído)
 
-### Energy consumption
+### 2. Iniciar o MongoDB
 
-The class `EnergyEmissionFactor` contains the emission factors for each brazilian state (UF). The emission follows the
-formula:
+```bash
+docker compose up -d
+```
 
-```Carbon emission = energy consumption * emission factor```
+O banco será populado automaticamente com os fatores de emissão (script `init-mongo.js`).
 
-### Transportation
+### 3. Executar a aplicação
 
-The class `TransportationEmissionFactor` contains the emission factors for each type of transportation. The emission
-follows the formula:
+**Via Gradle:**
+```bash
+./gradlew bootRun
+```
 
-```Carbon emission = distance * transportation type emission factor```
+**Via IDE:**
+Execute a classe `CarbonCalculatorApplication`
 
-### Solid waste
+A aplicação estará disponível em: **http://localhost:8085**
 
-The class `SolidWasteEmissionFactor` contains the emission factors for recyclable and non-recyclable solid waste. The
-emission follows the formula:
+### 4. Acessar documentação Swagger
 
-```Carbon emission = solid waste production * emission factor```
+**URL:** http://localhost:8085/swagger-ui.html
 
-## Technical Notes
+---
 
-### Database
+## 📡 API Endpoints
 
-Run `docker compose up` to start the MongoDB database. The database will be populated with the default collection
-contents defined in the `init-mongo.js` script when first started - all default emission factors are here. These values
-are only for this test and should not be
-considered real values for carbon emissions :smile:
+### 1️⃣ POST /open/start-calc
 
-If you need to reset the database to its initial state, you can run `docker compose down -v`, which will erase the
-database and repopulate the initial values in the next start.
+Inicia um novo cálculo de carbono.
 
-### Running the application
+**Request:**
+```json
+{
+  "name": "João Silva",
+  "email": "joao@example.com",
+  "phoneNumber": "11999999999",
+  "uf": "SP"
+}
+```
 
-You can use your IDE of choice to run the application. The main class is `CarbonCalculatorApplication`. The server will
-run
-on port 8085 (http://localhost:8085).
+**Response:** `201 Created`
+```json
+{
+  "id": "63f1a2b3c4d5e6f7g8h9i0j1"
+}
+```
 
-There is a swagger documentation available on http://localhost:8085/swagger-ui.html.
+---
 
-### Classes already created
+### 2️⃣ PUT /open/info
 
-We created the classes for the RestController and the DTOs needed to execute its endpoints. If you want to change them,
-please keep the same property names - don't break the defined interface.
+Atualiza informações de consumo do cálculo.
 
-We also created 3 basic models and their corresponding Repository interfaces for the carbon emission values that you
-need to use in your implementations. These are the objects pre-populated in the
-database. Feel free to add more methods to the *Repository interfaces as needed.
+**Request:**
+```json
+{
+  "id": "63f1a2b3c4d5e6f7g8h9i0j1",
+  "energyConsumption": 250.0,
+  "transportation": "car",
+  "monthlyDistance": 500.0,
+  "solidWasteProduction": 100.0,
+  "recyclePercentage": 0.3
+}
+```
 
-You will certainly need to create new classes to implement the logic for the endpoints and new models. Feel free to
-organize the code as you see fit.
+**Response:** `200 OK`
 
-There are a few implemented classes to check the application's health, security and swagger configs and so on. There's
-probably no need to modify them, but if you think it's necessary, go ahead.
+**Notas:**
+- `recyclePercentage`: valor entre 0.0 e 1.0 (ex: 0.3 = 30% reciclável)
+- Chamar múltiplas vezes sobrescreve os valores anteriores
 
-## Additional libs
+---
 
-You are free to add any dependencies you see fit to the project. We want you to implement this challenge the same way
-you deal in any other project: use your best judgment.
+### 3️⃣ GET /open/result/{id}
 
-## Test evaluation
+Retorna a pegada de carbono calculada.
 
-Your test will be evaluated both on the correctness of the implementation and the quality of the code.
+**Response:** `200 OK`
+```json
+{
+  "id": "63f1a2b3c4d5e6f7g8h9i0j1",
+  "energy": 20.425,
+  "transportation": 60.0,
+  "solidWaste": 12.0,
+  "total": 92.425
+}
+```
 
-There is no need to host your code anywhere. Publish your code in a public repository and share it with us, so we can
-download
-and run it.
+**Comportamento:**
+- Se `/info` não foi chamado, retorna zeros
+- Valores em kg CO₂
 
-Forks are disabled in this repository, so you should download the code and create a new repository with your
-implementation.
+---
 
-Good luck! :smile:
+## 🧮 Lógica de Cálculo
+
+### Energia
+```
+Emissão = consumo_energia × fator_emissão(UF)
+```
+
+**Exemplo:**
+- Consumo: 250 kWh
+- UF: SP (fator: 0.0817)
+- Emissão: 250 × 0.0817 = **20.425 kg CO₂**
+
+---
+
+### Transporte
+```
+Emissão = distância_mensal × fator_emissão(tipo_transporte)
+```
+
+**Exemplo:**
+- Distância: 500 km
+- Tipo: car (fator: 0.12)
+- Emissão: 500 × 0.12 = **60 kg CO₂**
+
+---
+
+### Resíduos Sólidos
+```
+Emissão_reciclável = resíduos × %_reciclável × fator_reciclável
+Emissão_não_reciclável = resíduos × (1 - %_reciclável) × fator_não_reciclável
+Emissão_total = Emissão_reciclável + Emissão_não_reciclável
+```
+
+**Exemplo:**
+- Resíduos: 100 kg
+- Reciclável: 30% (0.3)
+- Fator reciclável: 0.05
+- Fator não-reciclável: 0.15
+
+Cálculo:
+- Reciclável: 100 × 0.3 × 0.05 = 1.5 kg CO₂
+- Não-reciclável: 100 × 0.7 × 0.15 = 10.5 kg CO₂
+- **Total: 12 kg CO₂**
+
+---
+
+## 🧪 Testes
+
+### Executar todos os testes:
+```bash
+./gradlew test
+```
+
+### Coverage:
+Os testes cobrem:
+- ✅ Criação de cálculo
+- ✅ Atualização de informações
+- ✅ Cálculo de emissão de energia
+- ✅ Cálculo de emissão de transporte
+- ✅ Cálculo de emissão de resíduos sólidos
+- ✅ Cálculo de emissão total
+- ✅ Tratamento de exceções
+- ✅ Cenário de informações incompletas
+
+---
+
+## 📊 Logs
+
+A aplicação possui logs estruturados em diferentes níveis:
+
+- **INFO**: Operações principais (criação, atualização, resultados)
+- **DEBUG**: Detalhes dos cálculos (valores intermediários)
+- **WARN**: Situações anormais (fatores não encontrados, dados incompletos)
+- **ERROR**: Erros críticos (cálculo não encontrado, exceções)
+
+**Exemplo de log:**
+```
+INFO  - Starting new calculation for user: João Silva (joao@example.com)
+INFO  - Calculation created successfully with id: 63f1a2b3
+DEBUG - Energy emission: 250.0 kWh × 0.0817 = 20.425 kg CO2
+INFO  - Carbon footprint calculated - Energy: 20.425, Transport: 60.0, Waste: 12.0, Total: 92.425
+```
+
+---
+
+## ⚠️ Tratamento de Erros
+
+### 400 Bad Request
+Validação de dados falhou (campos obrigatórios, formatos inválidos).
+
+```json
+{
+  "timestamp": "2024-03-09T10:30:00",
+  "status": 400,
+  "error": "Validation Failed",
+  "errors": {
+    "email": "must be a well-formed email address",
+    "uf": "must not be blank"
+  }
+}
+```
+
+### 404 Not Found
+Cálculo não encontrado.
+
+```json
+{
+  "timestamp": "2024-03-09T10:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Calculation not found with id: invalid123"
+}
+```
+
+---
+
+## 🔄 Resetar Banco de Dados
+
+Para restaurar o MongoDB ao estado inicial:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+---
+
+## 💡 Boas Práticas Implementadas
+
+### Arquitetura
+- ✅ Separação em camadas (Controller → Service → Repository)
+- ✅ Injeção de dependências com `@RequiredArgsConstructor`
+- ✅ DTOs para transferência de dados
+
+### Código Limpo
+- ✅ Uso de Lombok (`@Data`, `@Builder`, `@Slf4j`)
+- ✅ Javadoc em classes e métodos principais
+- ✅ Nomes descritivos e auto-explicativos
+- ✅ Métodos pequenos e focados (SRP)
+
+### Segurança e Robustez
+- ✅ Validação com Bean Validation
+- ✅ Exception handling global
+- ✅ Exceptions customizadas
+- ✅ Logs estruturados
+
+### Qualidade
+- ✅ Testes unitários com JUnit 5 + Mockito
+- ✅ Documentação Swagger/OpenAPI
+- ✅ Tratamento de casos extremos (dados nulos, fatores não encontrados)
+
+---
+
+## 🎯 Exemplo de Fluxo Completo
+
+```bash
+# 1. Iniciar cálculo
+curl -X POST http://localhost:8085/open/start-calc \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Maria Santos",
+    "email": "maria@email.com",
+    "phoneNumber": "11988887777",
+    "uf": "RJ"
+  }'
+# Resposta: {"id": "abc123"}
+
+# 2. Adicionar informações de consumo
+curl -X PUT http://localhost:8085/open/info \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "abc123",
+    "energyConsumption": 300.0,
+    "transportation": "bus",
+    "monthlyDistance": 400.0,
+    "solidWasteProduction": 80.0,
+    "recyclePercentage": 0.5
+  }'
+
+# 3. Obter resultado
+curl http://localhost:8085/open/result/abc123
+# Resposta: {"id":"abc123","energy":24.51,"transportation":48.0,"solidWaste":8.0,"total":80.51}
+```
+
+---
+
+## 📝 Notas
+
+- Os fatores de emissão no banco são **valores de teste**, não representam dados reais
+- A aplicação roda na porta **8085** (não 8080)
+- Todos os parâmetros em `/start-calc` são obrigatórios
+- `recyclePercentage` deve estar entre 0.0 e 1.0
+
+---
+
+## 👨‍💻 Desenvolvedor
+
+Implementado como teste técnico para Action Labs.
+
+**Destaques da implementação:**
+- Arquitetura limpa e extensível
+- Código bem documentado
+- Testes unitários abrangentes
+- Logs para rastreabilidade
+- Tratamento robusto de erros
+
+---
+
+## 📄 Licença
+
+Projeto desenvolvido para fins de avaliação técnica.
