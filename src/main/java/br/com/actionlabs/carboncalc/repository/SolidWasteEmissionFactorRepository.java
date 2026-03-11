@@ -5,6 +5,9 @@ import br.com.actionlabs.carboncalc.model.SolidWasteEmissionFactor;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
-public interface SolidWasteEmissionFactorRepository
-    extends MongoRepository<SolidWasteEmissionFactor, String> {}
+public interface SolidWasteEmissionFactorRepository extends MongoRepository<SolidWasteEmissionFactor, String> {
+
+}
